@@ -8,7 +8,7 @@ def visualize(stat):
 	conn = sqlite3.connect('nflPlayers.db')
 	c = conn.cursor()
 
-	qbRawNames = c.execute("SELECT name, %s FROM QuarterBacksWeek2" % stat)
+	qbRawNames = c.execute("SELECT name, %s FROM RunningBacksToDate" % stat)
 	rowRaw = c.fetchall()
 	qbNames = []
 	ratings = []
@@ -26,4 +26,4 @@ def visualize(stat):
 	 
 	plt.show()
 
-visualize('passingYards')
+visualize('rushYdsPerGame')

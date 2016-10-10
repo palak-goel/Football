@@ -9,6 +9,9 @@ c = conn.cursor()
 def create_qb_table():
     c.execute('CREATE TABLE IF NOT EXISTS QuarterBacksWeek2(name TEXT PRIMARY KEY, team TEXT, games TEXT, qbRating TEXT, completions TEXT, attempts TEXT, passingPercentage TEXT, passingYards TEXT, passYdsPerGame TEXT, passYdsPerAttempt TEXT, passTDs TEXT, interceptions TEXT, rushes TEXT, rushYds TEXT, rushYdsPerGame TEXT, rushYdsPerAttempt TEXT, rushTDs TEXT, sacks TEXT, ydsLost TEXT, fumbles TEXT, fumblesLost TEXT)')
 
+def create_rb_table():
+	c.execute('CREATE TABLE IF NOT EXISTS RunningBacksToDate(name TEXT PRIMARY KEY, team TEXT, games TEXT, rush TEXT, rushYds TEXT, rushYdsPerGame TEXT, avgRush TEXT, rushTDs TEXT, rec TEXT, tgt TEXT, receiveYds TEXT, recieveYdsPerGame TEXT, avgReceive TEXT, lng TEXT, YAC TEXT, firstD TEXT, recieveTDs TEXT, fumbles TEXT, fumblesLost TEXT)')
+
 def qb_in_table():
 	qb = getQBRatings()
 	for stats in qb:
@@ -38,6 +41,33 @@ def qb_in_table():
 			(name,team,games,qbRating, passCompletions, passAttempts, passingPercentage, passingYards, passYdsPerGame, passingYdsPerAttempt, passingTDs, interceptions, rushAttempts, rushingYds, rushYdsPerGame, avgRush, rushTDs, sacks, ydsLost, fumbles, fumblesLost))
 		conn.commit()
 
+def rb_in_table():
+	rb = getRBRatings()
+	for stats in rb:
+		name = stats[0]
+		team = stats[1]
+		games = stats[2]
+		rush = stats[3]
+		rushYds = stats[4]
+		rushYdsPerGame = stats[5]
+		rushAvg = stats[6]
+		rushTDs = stats[7]
+		rec = stats[8]
+		tgt = stats[9]
+		receiveYds = stats[10]
+		receiveYdsPerGame = stats[11]
+		receiveAvg = stats[13]
+		lng = stats[14]
+		YAC = stats[15]
+		firstD = stats[16]
+		recTDs = stats[17]
+		fumbles = stats[19]
+		fumblesLost = stats[20]
+
+		c.execute("INSERT INTO RunningBacksToDate(name, team, games, rush, rushYds, rushYdsPerGame, avgRush, rushTDs, rec, tgt, receiveYds, recieveYdsPerGame, avgReceive, lng, YAC, firstD, recieveTDs, fumbles, fumblesLost) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			(name,team,games,rush, rushYds, rushYdsPerGame, rushAvg, rushTDs, rec, tgt, receiveYds, receiveYdsPerGame, receiveAvg, lng, YAC, firstD, recTDs, fumbles, fumblesLost))
+		conn.commit()
+
 def getQBRatings():
 	r = requests.get("https://sports.yahoo.com/nfl/stats/byposition?pos=QB&conference=NFL&year=season_2016&timeframe=ToDate&qualified=1&sort=49&old_category=QB")
 	#https://sports.yahoo.com/nfl/stats/byposition?pos=QB&conference=NFL&year=season_2016&timeframe=Week1&sort=626&old_category=QB
@@ -52,7 +82,6 @@ def getQBRatings():
 
 	#Other Stats 
 	statisticsSearch = soup.find_all('td', {'class':re.compile(r'yspscores')})
-
 	numQBs = len(statisticsSearch)/25
 	print(numQBs)
 	old_count = 0
@@ -76,6 +105,44 @@ def getQBRatings():
 
 	return player
 
+def getRBRatings():
+	r = requests.get("https://sports.yahoo.com/nfl/stats/byposition?pos=RB&conference=NFL&year=season_2016&sort=17&timeframe=ToDate")
+	#https://sports.yahoo.com/nfl/stats/byposition?pos=QB&conference=NFL&year=season_2016&timeframe=Week1&sort=626&old_category=QB
+	soup = BeautifulSoup(r.content,"html.parser")
+	
+	#QB Ratings
+	rbRatingsSearch = soup.find_all('td', {'class': re.compile(r'ysptblclbg6')})
+	rbRatings = []
+	for rb in rbRatingsSearch:
+		rating = cleanUpQBRat(str(rb))
+		rbRatings.append(rating)
+
+	#Other Stats 
+	statisticsSearch = soup.find_all('td', {'class':re.compile(r'yspscores')})
+
+	numRBs = len(statisticsSearch)/22
+	print(numRBs)
+	old_count = 0
+	new_count = 22
+	rbNum = 0
+
+	player = []
+	while (old_count < len(statisticsSearch)):
+		el_stats = []
+		for i in range(old_count, new_count):
+			if i < old_count+2:
+				el_stats.append(cleanUpQBRat(str(statisticsSearch[i])))
+			elif i == old_count + 3:
+				el_stats.append(rbRatings[rbNum])
+			else:
+				el_stats.append((cleanUp2(cleanUp(str(statisticsSearch[i])))))
+		old_count += 22
+		new_count += 22
+		rbNum += 1
+		player.append(el_stats)
+
+	return player
+
 def cleanUp(stat):
 	split1 = stat.split('>')
 	split2 = split1[1].split('<')
@@ -88,13 +155,13 @@ def cleanUpQBRat(stat):
 	return split2[1]
 
 def cleanUp2(stat):
-	name = stat.replace(u'\xa0', '')
+	name = stat.decode('utf-8').replace(u'\xa0', '')
 	return name
-
-
 
 
 create_qb_table()
 qb_in_table()
+create_rb_table()
+rb_in_table()
 
 
